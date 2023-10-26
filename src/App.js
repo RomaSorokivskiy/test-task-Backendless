@@ -1,25 +1,48 @@
-import logo from './logo.svg';
 import './App.css';
+import {Navigate, Route, Routes} from "react-router-dom";
+import Dashboard from "./componets/dashboard";
+import React, {useEffect, useState, Suspense} from "react";
+import {createContext} from "react";
+
+
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  const [route, setRoute] = useState()
+  const [routeData, setRouteData] = useState()
+    useEffect(() => {
+        fetch('./data/tabs.json').then(res => res.json()).then(json => {
+            setRoute(json)
+            setRouteData(json.data.find(el => el.order === 0));
+        }).catch(err => {
+            console.log(err)
+        })
+    }, []);
+  const StoreContext = createContext(route)
+  if(route === undefined){
+      return <div><h2>Loading...</h2></div>
+  }else {
+      const routeComponents = route.data.map((el) => {
+          const LazyLoading = React.lazy(() => import(`./${el.path}`))
+          return(
+              <Route index key={el.id} path={el.id} element={
+                  <Suspense fallback={"Loading..."}>
+                      <LazyLoading/>
+                  </Suspense>
+                }
+              />
+          )
+      })
+      return (
+          <StoreContext.Provider value={route}>
+              <Routes>
+                  <Route path='/' element={<Dashboard/>}>
+                      <Route index element={<Navigate to={routeData.id} replace/>}/>
+                      {routeComponents}
+                  </Route>
+              </Routes>
+          </StoreContext.Provider>
+      );
+  }
 }
 
 export default App;
